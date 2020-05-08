@@ -1,32 +1,50 @@
-sss#include <stdlib.h>
-#include <stdio.h>
-#include <errno.h>
-#include <string.h>
+#include "types.h"
+#include "stat.h"
+#include "user.h"
+#include "fs.h"
 
-#include <sys/types.h>
-#include <sys/stat.h>
-
-int main ( int argc, char *argv[])
+void cstat(char *path)
 {
-    struct stat FileAttrib;
+    int fd;
+  struct stat st;
+  
+  char *name = path;
 
-    if (argc != 2)
-        printf("Usage: <executable> <file>\n");
-    else
-    {
-        if (stat(argv[(argc - 1)], &FileAttrib) < 0)
-            printf("File Error Message = %s\n", strerror(errno));
-        else
-        {
-            tm *pTm = gmtime(&FileAttrib.st_atime);
-            printf("File last accessed on: %.2i/%.2i/%.2i at %.2i:%.2i:%.2i GMT\n",
-                     (pTm->tm_mon + 1),
-                     pTm->tm_mday,
-         (pTm->tm_year % 100),
-         pTm->tm_hour,
-         pTm->tm_min,
-         pTm->tm_sec);
-        }
-    }
-    return 0;
+  if((fd = open(path, 0)) < 0){
+    printf(2, "stat: cannot open %s\n", path);
+    return;
+  }
+
+  if(fstat(fd, &st) < 0){
+    printf(2, "stat: cannot stat %s\n", path);
+    close(fd);
+    return;
+  }
+
+  switch(st.type) {
+    case T_FILE:
+      printf(1, "File: %s\nType: %d (File)\nSize: %d\nDevice: %d\tInode: %d\tLinks: %d\n",name, st.type, st.size,st.dev,st.ino,st.nlink);
+      break;
+
+    case T_DIR:
+      printf(1, "File: %s\nType: %d (Directory)\nSize: %d\nDevice: %d\tInode: %d\tLinks: %d\n",name, st.type, st.size,st.dev,st.ino,st.nlink);
+      break;
+
+    case T_DEV:
+      printf(1, "File: %s\nType: %d(Device)\nSize: %d\nDevice: %d\tInode: %d\tLinks: %d\n",name, st.type, st.size,st.dev,st.ino,st.nlink);
+      break;
+  }
+  close(fd);
+}
+
+int main(int argc, char *argv[])
+{
+  int i;
+  if(argc < 2){
+    printf(1, "[stat] [argument]\n");
+    exit();
+  }
+  for(i=1; i<argc; i++)
+    cstat(argv[i]);
+  exit();
 }
